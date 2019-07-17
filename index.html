@@ -153,6 +153,160 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-技术博客分享" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/07/17/技术博客分享/">Spark学习之旅</a>
+    </h1>
+  
+
+        
+        <a href="/2019/07/17/技术博客分享/" class="archive-article-date">
+  	<time datetime="2019-07-17T09:08:45.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-07-17</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <ol>
+<li>Spark初体验——wordcount词频统计</li>
+<li>Spark基础知识学习</li>
+<li>Spark单机版环境搭建</li>
+<li>Spark源码学习</li>
+<li><a href="https://blog.csdn.net/qq_25745863/article/details/88745461" target="_blank" rel="noopener">Spark分布式环境搭建</a></li>
+<li><a href="https://blog.csdn.net/qq_25745863/article/details/88743750" target="_blank" rel="noopener">Spark基准测试平台BigDataBench使用教程</a></li>
+</ol>
+<h2 id="Spark分布式环境搭建"><a href="#Spark分布式环境搭建" class="headerlink" title="Spark分布式环境搭建"></a>Spark分布式环境搭建</h2><h3 id="1-集群机器准备"><a href="#1-集群机器准备" class="headerlink" title="1. 集群机器准备"></a>1. 集群机器准备</h3><p>(1)  在VMware 中安装三台虚拟机，一台Ubuntu虚拟机作Master,一台Ubuntu虚拟机作slave01,一台Ubuntu虚拟机作slave02。<br>  <img src="https://img-blog.csdnimg.cn/20190322164152646.png" alt="在这里插入图片描述"><br>(2)  Vmware网络设置成NAT连接，即共享主机的IP地址，位于同一局域网下。<br> <img src="https://img-blog.csdnimg.cn/20190322164215859.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzI1NzQ1ODYz,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>(3) 一般来说会自动分配三个连续的IP地址，如果需要配置静态IP，<a href="https://blog.csdn.net/xiaohuozi_2016/article/details/54743992" target="_blank" rel="noopener">见此教程</a></p>
+<h3 id="2-配置-ssh-无密码访问集群机器"><a href="#2-配置-ssh-无密码访问集群机器" class="headerlink" title="2. 配置 ssh 无密码访问集群机器"></a>2. 配置 ssh 无密码访问集群机器</h3><p>  (1)  ifconfig 命令查看当前虚拟机ip，记录下三台机器的ip<br> <img src="https://img-blog.csdnimg.cn/20190322164233198.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzI1NzQ1ODYz,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>（2）修改三台虚拟机的主机名  sudo vim /etc/hostname<br>分别改成master、slave01、slave02<br>（3）分别更改三台虚拟机下的配置文件 /etc/hosts，统一配置如下：<br> <img src="https://img-blog.csdnimg.cn/20190322164301756.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzI1NzQ1ODYz,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>（4） 三台主机电脑分别运行如下命令，测试能否连接到本地localhost</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh localhost</span><br></pre></td></tr></table></figure>
+
+<p>在保证了三台主机电脑都能连接到本地localhost后，还需要让master主机免密码登录slave01和slave02主机。在master执行如下命令，将master的id_rsa.pub传送给两台slave主机。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">scp ~/.ssh/id_rsa.pub hadoop@slave01:/home/hadoop/</span><br><span class="line">scp ~/.ssh/id_rsa.pub hadoop@slave02:/home/hadoop/</span><br></pre></td></tr></table></figure>
+
+<p>Shell 命令<br>在slave01,slave02主机上分别运行ls命令</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls ~</span><br></pre></td></tr></table></figure>
+
+<p>Shell 命令<br>可以看到slave01、slave02主机分别接收到id_rsa.pub文件<br>接着在slave01、slave02主机上将master的公钥加入各自的节点上,在slave01和slave02执行如下命令:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cat ~/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys</span><br><span class="line">rm ~/id_rsa.pub</span><br></pre></td></tr></table></figure>
+
+<p>如果master主机和slave01、slave02主机的用户名一样，那么在master主机上直接执行如下测试命令，即可让master主机免密码登录slave01、slave02主机。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh slave01</span><br></pre></td></tr></table></figure>
+
+<p>即可免密登陆其他节点</p>
+<h3 id="3-hadoop集群配置"><a href="#3-hadoop集群配置" class="headerlink" title="3.  hadoop集群配置"></a>3.  hadoop集群配置</h3><p>(1)修改master主机修改Hadoop如下配置文件，这些配置文件都位于/usr/local/hadoop/etc/hadoop目录下。</p>
+<p>修改slaves：<br>这里把DataNode的主机名写入该文件，每行一个。这里让master节点主机仅作为NameNode使用。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">slave01</span><br><span class="line">slave02</span><br></pre></td></tr></table></figure>
+
+<p>修改core-site.xml<br> <img src="https://img-blog.csdnimg.cn/20190322164458839.png" alt="在这里插入图片描述"><br>修改hdfs-site.xml：<br> <img src="https://img-blog.csdnimg.cn/20190322164503204.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzI1NzQ1ODYz,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>修改mapred-site.xml<br> <img src="https://img-blog.csdnimg.cn/20190322164508439.png" alt="在这里插入图片描述"><br>修改yarn-site.xml<br> <img src="https://img-blog.csdnimg.cn/20190322164512743.png" alt="在这里插入图片描述"><br>(2)  将 master 上的 /usr/local/Hadoop 文件夹复制到各个节点上。<br>在 master 节点主机上执行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cd /usr/local/</span><br><span class="line">tar -zcf ~/hadoop.master.tar.gz ./hadoop</span><br><span class="line">cd ~</span><br><span class="line">scp ./hadoop.master.tar.gz slave01:/home/hadoop</span><br><span class="line">scp ./hadoop.master.tar.gz slave02:/home/hadoop</span><br></pre></td></tr></table></figure>
+
+<p>在slave01,slave02节点上执行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo rm -rf /usr/local/hadoop/</span><br><span class="line">sudo tar -zxf ~/hadoop.master.tar.gz -C /usr/local</span><br><span class="line">sudo chown -R hadoop /usr/local/hadoop</span><br></pre></td></tr></table></figure>
+
+<p>(3)  启动hadoop集群<br>在master主机上执行如下命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cd /usr/local/hadoop</span><br><span class="line">bin/hdfs namenode -format</span><br><span class="line">sbin/start-all.sh</span><br></pre></td></tr></table></figure>
+
+<p>运行后，在master，slave01,slave02运行jps命令，查看：<br> <img src="https://img-blog.csdnimg.cn/20190322164556161.png" alt="在这里插入图片描述"><br> <img src="https://img-blog.csdnimg.cn/20190322164559766.png" alt="在这里插入图片描述"><br> <img src="https://img-blog.csdnimg.cn/20190322164603988.png" alt="在这里插入图片描述"><br><strong>说明Hadoop集群成功启动。</strong></p>
+<h3 id="4．安装Spark以及环境配置"><a href="#4．安装Spark以及环境配置" class="headerlink" title="4．安装Spark以及环境配置"></a>4．安装Spark以及环境配置</h3><p>（1）下载安装Spark<br>在Master节点机器上，访问Spark官方下载地址，下载所需版本。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo tar -zxf ~/下载/spark-2.1.0-bin-without-hadoop.tgz -C /usr/local/</span><br><span class="line">cd /usr/local</span><br><span class="line">sudo mv ./spark-2.1.0-bin-without-hadoop/ ./spark</span><br><span class="line">sudo chown -R hadoop ./spark</span><br></pre></td></tr></table></figure>
+
+<p>（2）配置环境变量<br>在Mster节点主机的终端中执行如下命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim ~/.bashrc</span><br></pre></td></tr></table></figure>
+
+<p>在.bashrc添加如下配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">export SPARK_HOME=/usr/local/spark</span><br><span class="line">export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin</span><br></pre></td></tr></table></figure>
+
+<p>（3）Spark配置<br>在Master节点主机上进行如下操作：</p>
+<p>1)    配置slaves文件<br>将 slaves.template 拷贝到 slaves</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd /usr/local/spark/</span><br><span class="line">cp ./conf/slaves.template ./conf/slaves</span><br></pre></td></tr></table></figure>
+
+<p>2)    slaves文件设置Worker节点。编辑slaves内容,把默认内容localhost替换成如下内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">slave01</span><br><span class="line">slave02</span><br></pre></td></tr></table></figure>
+
+<p>3)    配置spark-env.sh文件<br>将 spark-env.sh.template 拷贝到 spark-env.sh</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp ./conf/spark-env.sh.template ./conf/spark-env.sh</span><br></pre></td></tr></table></figure>
+
+<p>4)    编辑spark-env.sh,添加如下内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">export SPARK_DIST_CLASSPATH=$(/usr/local/hadoop/bin/hadoop classpath)</span><br><span class="line">export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop</span><br><span class="line">export SPARK_MASTER_IP=192.168.1.133</span><br></pre></td></tr></table></figure>
+
+<p>SPARK_MASTER_IP 指定 Spark 集群 Master 节点的 IP 地址；</p>
+<p>5)    配置好后，将Master主机上的/usr/local/spark文件夹复制到各个节点上。<br>在Master主机上执行如下命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cd /usr/local/</span><br><span class="line">tar -zcf ~/spark.master.tar.gz ./spark</span><br><span class="line">cd ~</span><br><span class="line">scp ./spark.master.tar.gz slave01:/home/hadoop</span><br><span class="line">scp ./spark.master.tar.gz slave02:/home/hadoop</span><br></pre></td></tr></table></figure>
+
+<p>6)    在slave01,slave02节点上分别执行下面同样的操作：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo rm -rf /usr/local/spark/</span><br><span class="line">sudo tar -zxf ~/spark.master.tar.gz -C /usr/local</span><br><span class="line">sudo chown -R hadoop /usr/local/spark</span><br></pre></td></tr></table></figure>
+
+<p>5 启动Spark集群<br>（1）先启动Hadoop集群：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd /usr/local/hadoop/</span><br><span class="line">sbin/start-all.sh</span><br></pre></td></tr></table></figure>
+
+<p>（2）启动Master节点<br>在Master节点主机上运行如下命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cd /usr/local/spark/</span><br><span class="line">sbin/start-master.sh</span><br></pre></td></tr></table></figure>
+
+<p>（3）启动所有Slave节点<br>在Master节点主机上运行如下命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sbin/start-slaves.sh</span><br></pre></td></tr></table></figure>
+
+<p>运行jps命令<br><img src="https://img-blog.csdnimg.cn/20190322165413263.png" alt="在这里插入图片描述"></p>
+<p><img src="https://img-blog.csdnimg.cn/20190322165356399.png" alt="在这里插入图片描述"><br><img src="https://img-blog.csdnimg.cn/20190322165341273.png" alt="在这里插入图片描述"><br>至此，spark分布式集群搭建完毕。</p>
+<p><em>如果您觉得有帮助，请点赞哦！</em></p>
+<p>参考链接：<a href="http://dblab.xmu.edu.cn/post/7586/" target="_blank" rel="noopener">林子雨编著-大数据软件安装和编程实践指南</a></p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">Spark</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/07/17/技术博客分享/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-hello-world" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -319,6 +473,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
             <input type="checkbox" q-on="click:toggleTag(e)" q-attr="checked:showTags">
           </label>
           <ul class="article-tag-list" q-show="showTags">
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color1">Spark</a>
+              </li>
             
             <div class="clearfix"></div>
           </ul>
